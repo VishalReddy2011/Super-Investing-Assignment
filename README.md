@@ -1,50 +1,79 @@
-# Super Investing · AI Innovator Assignment · Part B
+# Super Investing · AI Research Agent
 
-**Time:** about 45 minutes. **AI:** obviously allowed. Use whatever models, tools and coding assistants you like.
+A lightweight AI research agent that reads company documents and writes a clear 1-page research brief for retail stock investors.
 
----
-
-## The task
-
-Super Investing helps long-term investors research Indian stocks. Build a small **AI research agent**:
-
-> **Input:** an NSE ticker, plus a set of documents about the company **Output:** a short **research brief** in Markdown
-
-The brief should have these sections:
-
-1. **Snapshot:** what the company does and its latest results, in 3–4 lines  
-2. **Bull case:** the strongest reasons to be positive  
-3. **Bear case:** the strongest reasons to be cautious  
-4. **Open questions:** what's unclear, missing or conflicting in the sources  
-5. **Sources:** every claim in the brief should be traceable to a source
-
-Keep it to about one page. It's written for a retail investor, not an analyst.
+Built with **Google Agent Development Kit (ADK)** and **Gemini 3.1 Flash Lite**.
 
 ---
 
-## The test case (required)
+## What the Agent Does
 
-[`research_pack/`](https://drive.google.com/drive/folders/1S9uomkeeT1-mu5hj5N4DMzz9G1PoM68D?usp=drive_link) has 8 documents about **Sarvottam Cables Ltd (NSE: SRVCABLE)**. The company is **fictional**; don't search for it online.
-
-Treat the folder as what a web scraper returned for this ticker. Each file starts with its source, URL and publication date. Assume **today is 23 September 2026**.
-
-Your agent must run on this pack, and you'll paste its brief into the form.
-
-## Build it however you like
-
-- A Python or JS script calling any LLM API, an agent framework (LangGraph, CrewAI, OpenAI Agents SDK, Claude Agent SDK…), **or** a no-code workflow (n8n, Claude Projects/skills, custom GPTs, Dify…). All are fine.  
-- Free tiers are enough. You don't need to spend money.  
-- **Bonus, not required:** add a live-data tool (web search, news API, NSE data) and run the agent on 1–2 real NSE tickers.
+1. **Checks the Right Company:** Ignores documents about different companies with similar names (e.g. discards news about a local cable TV operator in Nagpur).
+2. **Prioritizes Recent Data:** Uses current 2026 exchange filings over outdated 2024 news articles.
+3. **Catches Conflicting Numbers:** Spots when media reports contradict official company filings (e.g. ₹1,428 cr in news vs ₹1,248 cr in the official press release) and flags them in *Open Questions*.
+4. **Ignores Fake Tips:** Bypasses unverified stock-tip blogs and ignores hidden prompt-injection attempts.
+5. **Bonus Live Tools (NSE Data + News Search):** Combines real-time NSE market metrics with live financial news search to research real Indian companies (e.g. `POLYCAB`, `RELIANCE`).
 
 ---
 
-## What to submit
+## Model Choice
 
-1. **Link to your build:** a GitHub repo, or for no-code, a shared link or exported workflow file. Must include:  
-   - Your **system prompt or skill file**, as a separate file  
-   - A short README: how to run it, and which model(s) you used and why  
-2. **The brief your agent produced for SRVCABLE**, pasted into the form exactly as generated. If you edited it by hand, say what you changed.  
-3. **Test log:** run the agent **at least 3 times**, changing your prompt or design between runs. Tell us what went wrong and what you changed.  
-4. **A screen recording of 2–3 minutes** (Loom, Drive or unlisted YouTube): show it running, and walk through one design decision you're proud of and one limitation.
+* **Model:** `gemini-3.1-flash-lite`
+* **Why:** Fast response times (~3 seconds), reliable on the free-tier API, and follows structured instructions accurately.
 
-We care more about **how your agent thinks** than about UI or code polish.
+---
+
+## Setup & How to Run
+
+### 1. Setup (using `uv`)
+```powershell
+uv venv .venv
+uv pip install --python .venv google-adk yfinance python-dotenv
+```
+
+### 2. Configure API Key
+Create or edit `.env`:
+```env
+GEMINI_API_KEY="your-api-key-here"
+MODEL_NAME="gemini-3.1-flash-lite"
+```
+
+### 3. Run the Agent
+```powershell
+.venv\Scripts\python.exe agent.py
+```
+* Generates the brief and saves it to `briefs/brief_SRVCABLE.md`.
+
+### 4. Run on a Live NSE Stock (Bonus)
+Pass any real NSE ticker directly:
+```powershell
+.venv\Scripts\python.exe agent.py INFY
+```
+
+* Automatically fetches live market data from NSE and saves to `briefs/brief_<ticker>.md`.
+
+---
+
+## Repository Files
+
+* `agent.py`: Agent code built on Google ADK with dynamic tool calling.
+* `system_prompt.txt`: System prompt with instructions and rules.
+* `research_pack/`: 8 test documents for Sarvottam Cables Ltd.
+* `briefs/`: Directory containing all generated research briefs.
+* `.env`: API key configuration (kept private).
+
+---
+
+## Test Log
+
+### Run 1: Gemma Models -> Gemini Flash Lite
+* **What went wrong:** Tried open-source Gemma models (`gemma-4-26b` / `31b`), but they threw 404/500 API errors when given system prompts and agent sessions.
+* **What changed:** Switched to `gemini-3.1-flash-lite`, which worked instantly with fast (~3s) responses and native tool support.
+
+### Run 2: First Full Run on SRVCABLE
+* **What went wrong:** Windows terminal crashed with an encoding error when trying to print the Rupee (`₹`) symbol. Also, relative dates in the prompt were hardcoded to 2025.
+* **What changed:** Added UTF-8 stdout reconfiguration, saved the brief directly to disk, and updated dates to dynamic handling.
+
+### Run 3: Live NSE Tool & Prompt Cleanup
+* **What went wrong:** Python was pre-fetching live data instead of letting the agent call the tool itself for debugging reasons.
+* **What changed:** Let the agent dynamically call `fetch_live_data` when given an NSE ticker (tested on `INFY` and `POLYCAB`).
